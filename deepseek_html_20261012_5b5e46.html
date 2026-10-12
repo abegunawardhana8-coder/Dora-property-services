@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Settings — DORA Property Solution</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebarMount"></aside>
+  <main class="main">
+    <header class="topbar">
+      <button class="hamburger" onclick="document.getElementById('sidebarMount').classList.toggle('open')">☰</button>
+      <h1>Business Settings</h1>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" id="saveBtn">Save Settings</button>
+      </div>
+    </header>
+    <section class="view">
+      <div class="panel"><h2>Business Identity</h2>
+        <div class="form-grid">
+          <div class="field"><label>Business Name</label><input id="businessName"></div>
+          <div class="field"><label>Tagline</label><input id="businessTagline"></div>
+          <div class="field full"><label>Street Address</label><input id="address"></div>
+          <div class="field"><label>Suburb</label><input id="suburb"></div>
+          <div class="field"><label>State</label><input id="state"></div>
+          <div class="field"><label>Postcode</label><input id="postcode"></div>
+          <div class="field"><label>Phone</label><input id="phone"></div>
+          <div class="field"><label>Email</label><input id="email" type="email"></div>
+          <div class="field"><label>Website</label><input id="website"></div>
+          <div class="field"><label>ABN (leave blank if not registered)</label><input id="abn"></div>
+        </div>
+      </div>
+
+      <div class="panel"><h2>Logo</h2>
+        <div class="form-grid">
+          <div class="field full"><label>Upload Logo (PNG/JPG/SVG)</label>
+            <input type="file" id="logoFile" accept="image/*">
+            <div class="hint">Current: <span id="logoStatus">— none —</span></div>
+          </div>
+          <div class="field"><label>Logo Size (px)</label><input id="logoSize" type="number" min="30" max="160"></div>
+          <div class="field"><label>Logo Placement</label>
+            <select id="logoPlacement"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select>
+          </div>
+          <div class="field full"><button class="btn btn-outline" id="logoClear">Remove Logo</button></div>
+        </div>
+      </div>
+
+      <div class="panel"><h2>Bank Details (only printed if filled)</h2>
+        <div class="form-grid">
+          <div class="field"><label>Bank Name</label><input id="bankName"></div>
+          <div class="field"><label>Account Name</label><input id="bankAccountName"></div>
+          <div class="field"><label>BSB</label><input id="bankBSB"></div>
+          <div class="field"><label>Account Number</label><input id="bankAccount"></div>
+        </div>
+      </div>
+
+      <div class="panel"><h2>Numbering &amp; Defaults</h2>
+        <div class="form-grid">
+          <div class="field"><label>Quotation Prefix</label><input id="quotationPrefix"></div>
+          <div class="field"><label>Invoice Prefix</label><input id="invoicePrefix"></div>
+          <div class="field"><label>Number Padding</label><input id="numberPadding" type="number" min="1" max="8"></div>
+          <div class="field"><label>Default Quotation Validity (days)</label><input id="defaultQuoteValidityDays" type="number"></div>
+          <div class="field"><label>Default Invoice Due (days)</label><input id="defaultInvoiceDueDays" type="number"></div>
+          <div class="field"><label>Currency Symbol</label><input id="currencySymbol"></div>
+        </div>
+      </div>
+
+      <div class="panel"><h2>GST</h2>
+        <div class="form-grid">
+          <div class="field full"><label class="checkline"><input type="checkbox" id="gstEnabled"> Business is registered for GST (charges GST)</label>
+            <div class="hint">Leave this off unless you are registered for GST.</div>
+          </div>
+          <div class="field"><label>GST Rate (%)</label><input id="gstRate" type="number" step="0.1"></div>
+          <div class="field full"><label class="checkline"><input type="checkbox" id="pricesIncludeGst"> Default to GST-inclusive line prices</label></div>
+        </div>
+      </div>
+
+      <div class="panel"><h2>Default Text</h2>
+        <div class="form-grid">
+          <div class="field full"><label>Default Payment Instructions</label><textarea id="defaultPaymentInstructions"></textarea></div>
+          <div class="field full"><label>Default Notes</label><textarea id="defaultNotes"></textarea></div>
+          <div class="field full"><label>Default Terms &amp; Conditions</label><textarea id="defaultTerms"></textarea></div>
+          <div class="field full"><label>Footer Text</label><input id="footerText"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/database.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/layout.js"></script>
+<script>
+const $=(id)=>document.getElementById(id);
+
+function fill(){
+  const keys=['businessName','businessTagline','address','suburb','state','postcode','phone','email','website','abn',
+    'bankName','bankAccountName','bankBSB','bankAccount',
+    'quotationPrefix','invoicePrefix','numberPadding',
+    'defaultQuoteValidityDays','defaultInvoiceDueDays','currencySymbol',
+    'defaultPaymentInstructions','defaultNotes','defaultTerms','footerText',
+    'logoSize','logoPlacement'];
+  keys.forEach(k=>{ if($(k)) $(k).value=SETTINGS[k]??''; });
+  $('gstEnabled').checked=!!SETTINGS.gstEnabled;
+  $('gstRate').value=SETTINGS.gstRate;
+  $('pricesIncludeGst').checked=!!SETTINGS.pricesIncludeGst;
+  $('logoStatus').textContent=SETTINGS.logoDataUrl?'uploaded':'— none —';
+}
+
+$('logoFile').onchange=()=>{
+  const f=$('logoFile').files[0];
+  if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ SETTINGS.logoDataUrl=r.result; $('logoStatus').textContent='uploaded (save to apply)'; };
+  r.readAsDataURL(f);
+};
+$('logoClear').onclick=()=>{ SETTINGS.logoDataUrl=''; $('logoStatus').textContent='— none —'; toast('Logo will be removed on save','warn'); };
+
+$('saveBtn').onclick=async()=>{
+  const patch={};
+  const keys=['businessName','businessTagline','address','suburb','state','postcode','phone','email','website','abn',
+    'bankName','bankAccountName','bankBSB','bankAccount',
+    'quotationPrefix','invoicePrefix','numberPadding',
+    'defaultQuoteValidityDays','defaultInvoiceDueDays','currencySymbol',
+    'defaultPaymentInstructions','defaultNotes','defaultTerms','footerText',
+    'logoSize','logoPlacement'];
+  keys.forEach(k=>{ if($(k)) patch[k]=$(k).value; });
+  patch.numberPadding=Number(patch.numberPadding||4);
+  patch.defaultQuoteValidityDays=Number(patch.defaultQuoteValidityDays||30);
+  patch.defaultInvoiceDueDays=Number(patch.defaultInvoiceDueDays||14);
+  patch.logoSize=Number(patch.logoSize||70);
+  patch.gstEnabled=$('gstEnabled').checked;
+  patch.gstRate=Number($('gstRate').value||10);
+  patch.pricesIncludeGst=$('pricesIncludeGst').checked;
+  patch.logoDataUrl=SETTINGS.logoDataUrl;
+  await saveSettings(patch);
+  toast('Settings saved','success');
+};
+
+(async function(){
+  await loadSettings();
+  renderSidebar('settings');
+  fill();
+})();
+</script>
+</body>
+</html>
